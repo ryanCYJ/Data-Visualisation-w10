@@ -1,49 +1,60 @@
-# Deploy tagged versions of the site to GitHub Pages
+# Deploy each tag to its own gh-pages sub-branch
 name: Deploy tagged version to Pages
 
 on:
-  # Trigger on tag pushes
   push:
     tags:
-      - '*'  # deploy on any tag
+      - '*'  # Trigger on any tag
 
 permissions:
-  contents: read
+  contents: write  # Required to push to gh-pages branches
   pages: write
   id-token: write
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
       - name: Determine Tag
         id: vars
         run: |
-          echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
-      - name: Copy site to tag folder
+      - name: Build or Prepare Site
         run: |
-          mkdir -p "tagged_sites/$TAG_NAME"
-          cp -r . "tagged_sites/$TAG_NAME"
+          # Replace this with your build command if you have one
+          # e.g., npm run build
+          echo "Copying site for deployment..."
+          mkdir -p site
+          cp -r * site/
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Push to gh-pages/<tag>
+        run: |
+          cd site
+          git init
+          git remote add origin https://github.com/${GITHUB_REPOSITORY}.git
+          git checkout -b gh-pages/${TAG_NAME}
+          git add .
+          git commit -m "Deploy ${TAG_NAME}"
+          git push -f origin gh-pages/${TAG_NAME}
+
+      - name: Set GitHub Pages branch for tag
+        uses: actions/github-script@v6
         with:
-          path: tagged_sites
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          script: |
+            const tag = process.env.TAG_NAME;
+            await github.rest.repos.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pages: {
+                source: {
+                  branch: `gh-pages/${tag}`,
+                  path: "/"
+                }
+              }
+            });
