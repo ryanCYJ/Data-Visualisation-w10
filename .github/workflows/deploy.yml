@@ -22,7 +22,6 @@ jobs:
             echo "target=$TAG" >> $GITHUB_OUTPUT
           else
             echo "target=latest" >> $GITHUB_OUTPUT
-          fi
 
       - name: Prepare gh-pages branch
         run: |
@@ -32,7 +31,6 @@ jobs:
       - name: Copy files
         run: |
           TARGET="${{ steps.vars.outputs.target }}"
-
           mkdir -p gh-pages/$TARGET
           rsync -av --delete \
             --exclude 'gh-pages' \
@@ -40,24 +38,22 @@ jobs:
             --exclude '.github' \
             ./ gh-pages/$TARGET/
 
-      - name: Create root redirect to latest
+      - name: Generate root index with version list
         run: |
-          cat > gh-pages/index.html <<'EOF'
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta http-equiv="refresh" content="0; url=latest/">
-              <title>Redirecting...</title>
-            </head>
-            <body>
-              <p>Redirecting to <a href="latest/">latest/</a></p>
-            </body>
-          </html>
-          EOF
+          ROOT_PAGE="gh-pages/index.html"
+          echo "<!DOCTYPE html><html><head><title>Versions</title></head><body>" > $ROOT_PAGE
+          echo "<h1>Available Versions</h1><ul>" >> $ROOT_PAGE
+          for dir in gh-pages/*/ ; do
+            # Skip if not a directory
+            [ -d "$dir" ] || continue
+            # Get folder name
+            version=$(basename "$dir")
+            echo "<li><a href=\"$version/\">$version</a></li>" >> $ROOT_PAGE
+          done
+          echo "</ul></body></html>" >> $ROOT_PAGE
 
       - name: Commit and push changes
         run: |
-          cd gh-pages
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add .
