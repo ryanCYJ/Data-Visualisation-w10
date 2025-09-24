@@ -1,0 +1,41 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main   # Deploy "latest" when pushing to main
+    tags:
+      - "v*"   # Deploy tagged versions like v1.0, v2.0
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy
+        run: |
+          # Identify whether it's a tag or branch build
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TARGET=${GITHUB_REF#refs/tags/}   # e.g. v1.0
+          else
+            TARGET=latest
+          fi
+
+          echo "Deploying to folder: $TARGET"
+
+          # Clone or init gh-pages branch
+          git clone --depth 1 --branch gh-pages https://github.com/${GITHUB_REPOSITORY}.git gh-pages || mkdir gh-pages
+
+          # Copy files into the correct folder
+          mkdir -p gh-pages/$TARGET
+          cp -r * gh-pages/$TARGET/
+
+          cd gh-pages
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Deploy $TARGET" || echo "No changes to commit"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git gh-pages
