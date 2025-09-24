@@ -1,4 +1,4 @@
-# Deploy each tag to a subfolder on gh-pages
+# Deploy each tag to a subfolder on GitHub Pages
 name: Deploy tagged version to GitHub Pages
 
 on:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout main
+      # 1. Checkout the repo
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -38,39 +38,24 @@ jobs:
             fi
           done
 
-      # 4. Deploy to gh-pages branch (in a folder named after the tag)
-      - name: Deploy to gh-pages
+      # 4. Organize versioned folder
+      - name: Move site into tag folder
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p deploy
+          mkdir -p deploy/$TAG_NAME
+          cp -r site/* deploy/$TAG_NAME/
 
-          # Clone the gh-pages branch or create it if it doesn't exist
-          git clone --branch gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git gh-pages || \
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git gh-pages
-          
-          cd gh-pages
-          git checkout gh-pages || git checkout -b gh-pages
-
-          # Copy new version into a folder named after the tag
-          mkdir -p $TAG_NAME
-          cp -r ../site/* $TAG_NAME/
-
-          git add $TAG_NAME
-          git commit -m "Deploy $TAG_NAME" || echo "Nothing to commit"
-          git push origin gh-pages
-
-      # 5. Set GitHub Pages source (optional)
-      - name: Set GitHub Pages branch
-        uses: actions/github-script@v6
+      # 5. Upload artifact for Pages
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          script: |
-            await github.rest.repos.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pages: {
-                source: {
-                  branch: 'gh-pages',
-                  path: '/'
-                }
-              }
-            });
+          path: deploy
+
+      # 6. Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # 7. Optional: set Pages branch (already handled by deploy-pages)
+      - name: Show deployed URL
+        run: echo "Site deployed under folder /$TAG_NAME/"
