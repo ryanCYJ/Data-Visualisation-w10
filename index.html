@@ -8,18 +8,21 @@
     <script src="https://cdn.jsdelivr.net/npm/vega@6"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-lite@6"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@7"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <div id="vis"></div>
+    <div id="vis-map"></div>
+    <div id="vis-bar"></div>
     <script type="text/javascript">
-        var yourVlSpec = {
+
+        const mapSpec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
             "width": 1500,
             "height": 800,
             "title": "Airplane Crashes from 2000 to 2025",
             "projection": {
-                "type": "naturalEarth1"
+                "type": "naturalEarth1",
             },
             "layer": [
                 {
@@ -112,8 +115,137 @@
             ]
         }
 
+        const barSpec = {
+            "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+            "width": 600,
+            "height": 600,
+            "title": "Top 10 Operators by Number of Crashes",
+            "data": { "url": "data/plane_crashes_2000_2025.csv" },
+            "params": [
+                {
+                    "name": "yearFilter",
+                    "value": "All",
+                    "bind": {
+                        "input": "select",
+                        "options": ["All", 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+                        "name": "Select Year: "
+                    }
+                }
+            ],
 
-        vegaEmbed('#vis', yourVlSpec);
+            "layer": [
+                {
+                    "transform": [
+                        {
+                            "calculate": "year(timeParse(datum.Date, '%B %d, %Y'))",
+                            "as": "Year"
+                        },
+                        {
+                            "filter": "yearFilter == 'All' || datum.Year == yearFilter"
+                        },
+                        {
+                            "aggregate": [{
+                                "op": "count",
+                                "field": "Operator",
+                                "as": "crash_no"
+                            }],
+                            "groupby": ["Operator"]
+                        },
+                        {
+                            "window": [{ "op": "row_number", "as": "rank" }],
+                            "sort": [{ "field": "crash_no", "order": "descending" }],
+                        },
+                        {
+                            "filter": "datum.rank <= 10"
+                        },
+                    ],
+                    "mark": {
+                        "type": "bar",
+                        "size": 40,
+                        "color": "#F08787",
+                    },
+                    "encoding": {
+                        "x": {
+                            "field": "Operator",
+                            "type": "nominal",
+                            "sort": "-y",
+                            "axis": { "labelAngle": 30 },
+                        },
+                        "y": {
+                            "field": "crash_no",
+                            "type": "quantitative",
+                            "title": "Number of Crashes"
+                        },
+                        "tooltip": [
+                            { "field": "Operator" },
+                            { "field": "crash_no", "title": "Crashes" },
+                        ]
+                    }
+                },
+                {
+                    "transform": [
+                        {
+                            "calculate": "year(timeParse(datum.Date, '%B %d, %Y'))",
+                            "as": "Year"
+                        },
+                        {
+                            "filter": "yearFilter == 'All' || datum.Year == yearFilter"
+                        },
+                        {
+                            "aggregate": [
+                                { "op": "count", "field": "Operator", "as": "crash_no" }
+                            ],
+                            "groupby": ["Operator"]
+                        },
+                    ],
+                    "layer": [
+                        {
+                            "mark": {
+                                "type": "rule",
+                                "strokeWidth": 1,
+                                "strokeDash": [8, 8],
+                                "color": "#2d2d2d"
+                            },
+                            "encoding": {
+                                "y": {
+                                    "aggregate": "mean",
+                                    "field": "crash_no",
+                                    "type": "quantitative",
+                                },
+                            }
+                        },
+                        {
+                            "mark": {
+                                "type": "text",
+                                "dx": 700,
+                                "size": 10,
+                                "color": "#2d2d2d"
+                            },
+                            "encoding": {
+                                "x": { "value": 0 },
+                                "y": {
+                                    "aggregate": "mean",
+                                    "field": "crash_no",
+                                    "type": "quantitative",
+                                },
+                                "text": { "value": "Average Number of Crashes per Operator" },
+                                "tooltip": [
+                                    {
+                                        "aggregate": "mean",
+                                        "field": "crash_no",
+                                        "title": "Average number of crashes per Operator"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+
+                }
+            ]
+        };
+
+        vegaEmbed('#vis-map', mapSpec);
+        vegaEmbed('#vis-bar', barSpec)
     </script>
 </body>
 
