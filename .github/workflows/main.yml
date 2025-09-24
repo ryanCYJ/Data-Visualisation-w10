@@ -27,13 +27,11 @@ jobs:
 
       - name: Prepare deployment artifact without the removed version
         run: |
-          mkdir -p deploy
-          # Copy all folders except the one to remove
-          for d in site/*; do
+          mkdir -p new_deploy
+          for d in deploy/*; do
             name=$(basename "$d")
             if [[ "$name" != "$VERSION" ]]; then
-              mkdir -p deploy/"$name"
-              cp -r "$d"/* deploy/"$name"/
+              cp -r "$d" new_deploy/"$name"
             fi
           done
 
