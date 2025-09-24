@@ -25,13 +25,15 @@ jobs:
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
-      - name: Build or Prepare Site
+      - name: Prepare site for deployment
         run: |
-          # Replace this with your build command if you have one
-          # e.g., npm run build
-          echo "Copying site for deployment..."
           mkdir -p site
-          cp -r * site/
+          for f in *; do
+            if [[ "$f" != "site" && "$f" != "LICENSE" && "$f" != "README.md" && "$f" != ".github" ]]; then
+              cp -r "$f" site/
+            fi
+          done
+
 
       - name: Push to gh-pages/<tag>
         run: |
