@@ -9,7 +9,7 @@ on:
         default: 'v3'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -17,30 +17,25 @@ jobs:
   remove_version:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Determine version to remove
+      # 1. Determine the version to remove
+      - name: Set version
         run: |
-          VERSION=${{ github.event.inputs.version }}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
-      - name: Prepare deployment artifact without the removed version
+      # 2. Prepare empty deployment folder
+      - name: Prepare empty folder for removal
         run: |
-          mkdir -p new_deploy
-          for d in deploy/*; do
-            name=$(basename "$d")
-            if [[ "$name" != "$VERSION" ]]; then
-              cp -r "$d" new_deploy/"$name"
-            fi
-          done
+          mkdir -p deploy/$VERSION
+          echo "Removing version $VERSION by deploying empty folder."
 
+      # 3. Upload empty artifact
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: deploy
 
-      - name: Deploy updated Pages
+      # 4. Deploy empty folder to GitHub Pages
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
