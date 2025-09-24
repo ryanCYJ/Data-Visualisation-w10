@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plane Crash Visualisation</title>
+    <script src="https://cdn.jsdelivr.net/npm/vega@6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@7"></script>
+</head>
+
+<body>
+    <div id="vis"></div>
+    <script type="text/javascript">
+        var yourVlSpec = {
+            "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+            "width": 1500,
+            "height": 800,
+            "title": "Airplane Crashes from 2000 to 2025",
+            "projection": {
+                "type": "naturalEarth1"
+            },
+            "layer": [
+                {
+                    "data": {
+                        "url": "data/ne_50m_ocean.json",
+                        "format": {
+                            "type": "topojson",
+                            "feature": "ne_50m_ocean"
+                        }
+                    },
+                    "mark": {
+                        "type": "geoshape",
+                        "fill": "#91C8E4",
+                    },
+                },
+                {
+                    "data": {
+                        "url": "data/ne_110m_admin_0_countries.json",
+                        "format": {
+                            "type": "topojson",
+                            "feature": "ne_110m_admin_0_countries"
+                        }
+                    },
+                    "mark": {
+                        "type": "geoshape",
+                        "fill": "#FBF5DE",
+                        "stroke": "#EAC8A6"
+                    },
+                },
+                {
+                    "data": { "graticule": { "step": [30, 30] } },
+                    "mark": { "type": "geoshape", "stroke": "#DCDCDC" },
+                },
+                {
+                    "data": {
+                        "values": [
+                            { "name": "Atlantic Ocean", "longitude": -35, "latitude": 15 },
+                            { "name": "Pacific Ocean", "longitude": -140, "latitude": 0 },
+                            { "name": "Indian Ocean", "longitude": 80, "latitude": -20 },
+                            { "name": "Southern Ocean", "longitude": 0, "latitude": -65 },
+                            { "name": "Arctic Ocean", "longitude": 0, "latitude": 72 }
+                        ]
+                    },
+                    "mark": {
+                        "type": "text",
+                        "fontSize": 16,
+                        "fontStyle": "italic",
+                        "fill": "#3A59D1"
+                    },
+                    "encoding": {
+                        "longitude": { "field": "longitude", "type": "quantitative" },
+                        "latitude": { "field": "latitude", "type": "quantitative" },
+                        "text": { "field": "name" }
+                    }
+                },
+                {
+                    "data": {
+                        "url": "data/plane_crashes_2000_2025.csv"
+                    },
+                    "mark": "circle",
+                    "encoding": {
+                        "longitude": {
+                            "field": "Longitude",
+                            "type": "quantitative"
+                        },
+                        "latitude": {
+                            "field": "Latitude",
+                            "type": "quantitative"
+                        },
+                        "size": {
+                            "bin": { "step": 50 },
+                            "field": "Fatalities Total",
+                            "type": "quantitative",
+                            "scale": { "range": [10, 100] },
+                            "legend": { "title": "Total Number of Fatalities" }
+                        },
+                        "color": { "value": "#DC3C22" },
+                        "tooltip": [
+                            { "field": "Date" },
+                            { "field": "Location" },
+                            { "field": "Operator" },
+                            { "field": "Route" },
+                            { "field": "Aboard Total" },
+                            { "field": "Fatalities Total" },
+                            { "field": "Ground" },
+                            { "field": "Summary" },
+                        ],
+                    }
+                }
+            ]
+        }
+
+
+        vegaEmbed('#vis', yourVlSpec);
+    </script>
+</body>
+
+</html>
