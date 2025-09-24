@@ -1,13 +1,14 @@
-# Deploy each tag to its own gh-pages sub-branch
-name: Deploy tagged version to Pages
+# Deploy each tag to a subfolder on gh-pages
+name: Deploy tagged version to GitHub Pages
 
 on:
   push:
     tags:
       - '*'  # Trigger on any tag
+  workflow_dispatch:
 
 permissions:
-  contents: write  # Required to push to gh-pages branches
+  contents: write
   pages: write
   id-token: write
 
@@ -16,49 +17,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout main
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2. Determine the tag
       - name: Determine Tag
         id: vars
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
+      # 3. Prepare site files
       - name: Prepare site for deployment
         run: |
           mkdir -p site
           for f in *; do
-            if [[ "$f" != "site" && "$f" != "LICENSE" && "$f" != "README.md" && "$f" != ".github" ]]; then
+            if [[ "$f" != "site" && "$f" != ".github" && "$f" != "LICENSE" && "$f" != "README.md" ]]; then
               cp -r "$f" site/
             fi
           done
 
-
-      - name: Push to gh-pages/<tag>
+      # 4. Deploy to gh-pages branch (in a folder named after the tag)
+      - name: Deploy to gh-pages
         run: |
-          cd site
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git
-          git checkout -b gh-pages/${TAG_NAME}
-          git add .
-          git commit -m "Deploy ${TAG_NAME}"
-          git push -f origin gh-pages/${TAG_NAME}
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Set GitHub Pages branch for tag
+          # Clone the gh-pages branch or create it if it doesn't exist
+          git clone --branch gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git gh-pages || \
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git gh-pages
+          
+          cd gh-pages
+          git checkout gh-pages || git checkout -b gh-pages
+
+          # Copy new version into a folder named after the tag
+          mkdir -p $TAG_NAME
+          cp -r ../site/* $TAG_NAME/
+
+          git add $TAG_NAME
+          git commit -m "Deploy $TAG_NAME" || echo "Nothing to commit"
+          git push origin gh-pages
+
+      # 5. Set GitHub Pages source (optional)
+      - name: Set GitHub Pages branch
         uses: actions/github-script@v6
         with:
           script: |
-            const tag = process.env.TAG_NAME;
             await github.rest.repos.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pages: {
                 source: {
-                  branch: `gh-pages/${tag}`,
-                  path: "/"
+                  branch: 'gh-pages',
+                  path: '/'
                 }
               }
             });
